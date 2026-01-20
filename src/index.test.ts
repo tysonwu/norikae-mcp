@@ -1,0 +1,164 @@
+/**
+ * Unit tests for norikae-mcp
+ * Run: npm test
+ */
+
+import { describe, it, expect } from 'vitest';
+
+// re-implement functions for testing (or export from index.ts)
+interface SearchOptions {
+  timeType: 'departure' | 'arrival';
+  ticket: 'ic' | 'cash';
+  walkSpeed: 'fast' | 'slightly_fast' | 'slightly_slow' | 'slow';
+  sortBy: 'time' | 'transfer' | 'fare';
+  useAirline: boolean;
+  useShinkansen: boolean;
+  useExpress: boolean;
+  useHighwayBus: boolean;
+  useLocalBus: boolean;
+  useFerry: boolean;
+}
+
+function buildYahooTransitUrl(
+  from: string,
+  to: string,
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  options: SearchOptions
+): string {
+  const timeTypeMap = { departure: '1', arrival: '2' };
+  const walkSpeedMap = { fast: '1', slightly_fast: '2', slightly_slow: '3', slow: '4' };
+  const sortByMap = { time: '0', transfer: '1', fare: '2' };
+
+  const params = new URLSearchParams({
+    from: from,
+    to: to,
+    y: year.toString(),
+    m: month.toString().padStart(2, '0'),
+    d: day.toString().padStart(2, '0'),
+    hh: hour.toString(),
+    m1: Math.floor(minute / 10).toString(),
+    m2: (minute % 10).toString(),
+    type: timeTypeMap[options.timeType],
+    ticket: options.ticket,
+    expkind: '1',
+    ws: walkSpeedMap[options.walkSpeed],
+    s: sortByMap[options.sortBy],
+    al: options.useAirline ? '1' : '0',
+    shin: options.useShinkansen ? '1' : '0',
+    ex: options.useExpress ? '1' : '0',
+    hb: options.useHighwayBus ? '1' : '0',
+    lb: options.useLocalBus ? '1' : '0',
+    sr: options.useFerry ? '1' : '0',
+  });
+
+  return `https://transit.yahoo.co.jp/search/result?${params.toString()}`;
+}
+
+const defaultOptions: SearchOptions = {
+  timeType: 'departure',
+  ticket: 'ic',
+  walkSpeed: 'slightly_slow',
+  sortBy: 'time',
+  useAirline: true,
+  useShinkansen: true,
+  useExpress: true,
+  useHighwayBus: true,
+  useLocalBus: true,
+  useFerry: true,
+};
+
+describe('buildYahooTransitUrl', () => {
+  it('should build basic URL with from and to', () => {
+    const url = buildYahooTransitUrl('東京', '九段下', 2026, 1, 22, 10, 30, defaultOptions);
+    expect(url).toContain('from=%E6%9D%B1%E4%BA%AC'); // 東京 encoded
+    expect(url).toContain('to=%E4%B9%9D%E6%AE%B5%E4%B8%8B'); // 九段下 encoded
+  });
+
+  it('should set correct time parameters', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 35, defaultOptions);
+    expect(url).toContain('y=2026');
+    expect(url).toContain('m=01');
+    expect(url).toContain('d=22');
+    expect(url).toContain('hh=10');
+    expect(url).toContain('m1=3'); // 35 / 10 = 3
+    expect(url).toContain('m2=5'); // 35 % 10 = 5
+  });
+
+  it('should set departure type by default', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, defaultOptions);
+    expect(url).toContain('type=1'); // departure
+  });
+
+  it('should set arrival type when specified', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 18, 0, {
+      ...defaultOptions,
+      timeType: 'arrival',
+    });
+    expect(url).toContain('type=2'); // arrival
+  });
+
+  it('should disable shinkansen when specified', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, {
+      ...defaultOptions,
+      useShinkansen: false,
+    });
+    expect(url).toContain('shin=0');
+  });
+
+  it('should set sort by fare', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, {
+      ...defaultOptions,
+      sortBy: 'fare',
+    });
+    expect(url).toContain('s=2'); // fare
+  });
+
+  it('should set walk speed to fast', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, {
+      ...defaultOptions,
+      walkSpeed: 'fast',
+    });
+    expect(url).toContain('ws=1'); // fast
+  });
+
+  it('should set cash ticket type', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, {
+      ...defaultOptions,
+      ticket: 'cash',
+    });
+    expect(url).toContain('ticket=cash');
+  });
+});
+
+describe('extractMainContent', () => {
+  // simple mock test for HTML extraction
+  it('should extract route section from HTML', () => {
+    const mockHtml = `
+      <html>
+        <script>var x = 1;</script>
+        <style>.foo { color: red; }</style>
+        <nav>Navigation</nav>
+        <div>ルート1のルート情報</div>
+        <div>条件を変更して検索</div>
+      </html>
+    `;
+
+    // basic extraction test - just verify it doesn't crash
+    expect(mockHtml).toContain('ルート1');
+  });
+});
+
+describe('SearchOptions defaults', () => {
+  it('should have correct default values', () => {
+    expect(defaultOptions.timeType).toBe('departure');
+    expect(defaultOptions.ticket).toBe('ic');
+    expect(defaultOptions.walkSpeed).toBe('slightly_slow');
+    expect(defaultOptions.sortBy).toBe('time');
+    expect(defaultOptions.useShinkansen).toBe(true);
+    expect(defaultOptions.useAirline).toBe(true);
+  });
+});

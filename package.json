@@ -1,0 +1,48 @@
+{
+  "name": "norikae-mcp",
+  "version": "0.1.0",
+  "description": "Yahoo!乗換案内を使った日本の電車乗り換え検索MCP",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "norikae-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:manual": "npx ts-node src/test.ts",
+    "test:url": "npx ts-node src/test.ts --url",
+    "test:fetch": "npx ts-node src/test.ts --fetch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "transit",
+    "japan",
+    "train",
+    "乗り換え",
+    "yahoo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist"
+  ]
+}
