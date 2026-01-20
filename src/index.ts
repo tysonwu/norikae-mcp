@@ -19,8 +19,9 @@ const searchRouteSchema = {
   day: z.number().optional().describe('出発日（1-31）'),
   hour: z.number().optional().describe('出発時刻の時（0-23）'),
   minute: z.number().optional().describe('出発時刻の分（0-59）'),
-  timeType: z.enum(['departure', 'arrival']).optional().describe('時刻指定タイプ：departure=出発時刻、arrival=到着時刻'),
+  timeType: z.enum(['departure', 'arrival', 'first_train', 'last_train', 'unspecified']).optional().describe('時刻指定タイプ：departure=出発時刻、arrival=到着時刻、first_train=始発、last_train=終電、unspecified=指定なし'),
   ticket: z.enum(['ic', 'cash']).optional().describe('運賃タイプ：ic=IC運賃、cash=きっぷ運賃'),
+  seatPreference: z.enum(['non_reserved', 'reserved', 'green']).optional().describe('座席指定：non_reserved=自由席優先、reserved=指定席優先、green=グリーン車優先'),
   walkSpeed: z.enum(['fast', 'slightly_fast', 'slightly_slow', 'slow']).optional().describe('歩く速度'),
   sortBy: z.enum(['time', 'transfer', 'fare']).optional().describe('並び順：time=到着が早い順、transfer=乗換回数順、fare=料金安い順'),
   useAirline: z.boolean().optional().describe('空路を使う'),
@@ -124,7 +125,7 @@ server.registerTool(
   async (args) => {
     const {
       from, to, via, year, month, day, hour, minute,
-      timeType, ticket, walkSpeed, sortBy,
+      timeType, ticket, seatPreference, walkSpeed, sortBy,
       useAirline, useShinkansen, useExpress, useHighwayBus, useLocalBus, useFerry,
     } = args;
 
@@ -142,6 +143,7 @@ server.registerTool(
     const options = {
       timeType: timeType ?? 'departure',
       ticket: ticket ?? 'ic',
+      seatPreference: seatPreference ?? 'non_reserved',
       walkSpeed: walkSpeed ?? 'slightly_slow',
       sortBy: sortBy ?? 'time',
       useAirline: useAirline ?? true,
@@ -172,8 +174,9 @@ server.registerTool(
 );
 
 interface SearchOptions {
-  timeType: 'departure' | 'arrival';
+  timeType: 'departure' | 'arrival' | 'first_train' | 'last_train' | 'unspecified';
   ticket: 'ic' | 'cash';
+  seatPreference: 'non_reserved' | 'reserved' | 'green';
   walkSpeed: 'fast' | 'slightly_fast' | 'slightly_slow' | 'slow';
   sortBy: 'time' | 'transfer' | 'fare';
   useAirline: boolean;
@@ -196,9 +199,16 @@ function buildYahooTransitUrl(
   options: SearchOptions
 ): string {
   // map options to Yahoo URL parameters
-  const timeTypeMap = { departure: '1', arrival: '2' };
+  // type: 1=出発, 4=到着, 3=始発, 2=終電, 5=指定なし
+  const timeTypeMap = { departure: '1', arrival: '4', first_train: '3', last_train: '2', unspecified: '5' };
+  // ticket: ic=ICカード優先, normal=現金（きっぷ）優先
+  const ticketMap = { ic: 'ic', cash: 'normal' };
+  // expkind: 1=自由席優先, 2=指定席優先, 3=グリーン車優先
+  const seatPreferenceMap = { non_reserved: '1', reserved: '2', green: '3' };
+  // ws: 1=急いで, 2=少し急いで, 3=少しゆっくり, 4=ゆっくり
   const walkSpeedMap = { fast: '1', slightly_fast: '2', slightly_slow: '3', slow: '4' };
-  const sortByMap = { time: '0', transfer: '1', fare: '2' };
+  // s: 0=到着が早い順, 1=料金が安い順, 2=乗換回数順
+  const sortByMap = { time: '0', fare: '1', transfer: '2' };
 
   const params = new URLSearchParams({
     from: from,
@@ -210,8 +220,8 @@ function buildYahooTransitUrl(
     m1: Math.floor(minute / 10).toString(),
     m2: (minute % 10).toString(),
     type: timeTypeMap[options.timeType],
-    ticket: options.ticket,
-    expkind: '1',
+    ticket: ticketMap[options.ticket],
+    expkind: seatPreferenceMap[options.seatPreference],
     ws: walkSpeedMap[options.walkSpeed],
     s: sortByMap[options.sortBy],
     al: options.useAirline ? '1' : '0',

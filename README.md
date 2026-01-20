@@ -102,8 +102,9 @@ npx norikae-mcp
 
 | パラメータ | 型 | デフォルト | 説明 / Description |
 |-----------|------|----------|---------------------|
-| `timeType` | `departure` \| `arrival` | `departure` | 時刻指定タイプ / Time type |
+| `timeType` | `departure` \| `arrival` \| `first_train` \| `last_train` \| `unspecified` | `departure` | 時刻指定タイプ / Time type |
 | `ticket` | `ic` \| `cash` | `ic` | 運賃タイプ / Fare type |
+| `seatPreference` | `non_reserved` \| `reserved` \| `green` | `non_reserved` | 座席指定 / Seat preference |
 | `walkSpeed` | `fast` \| `slightly_fast` \| `slightly_slow` \| `slow` | `slightly_slow` | 歩く速度 / Walking speed |
 | `sortBy` | `time` \| `transfer` \| `fare` | `time` | 並び順 / Sort order |
 
@@ -161,6 +162,29 @@ AIに以下のように話しかけると、自動的に適切なオプション
 | 「9時の会議に間に合うように」 | `timeType: arrival`, `hour: 9` |
 | "I want to arrive by 6 PM" | `timeType: arrival`, `hour: 18` |
 | "Need to be there for a 9 AM meeting" | `timeType: arrival`, `hour: 9` |
+
+### 始発・終電 / First/Last Train (timeType)
+
+| あなたの質問 / Your Question | 認識されるオプション / Recognized Options |
+|------------------------------|------------------------------------------|
+| 「始発で」 | `timeType: first_train` |
+| 「一番早い電車」 | `timeType: first_train` |
+| 「終電で帰りたい」 | `timeType: last_train` |
+| 「最終電車は？」 | `timeType: last_train` |
+| "First train of the day" | `timeType: first_train` |
+| "Last train home" | `timeType: last_train` |
+
+### 座席指定 / Seat Preference (seatPreference)
+
+| あなたの質問 / Your Question | 認識されるオプション / Recognized Options |
+|------------------------------|------------------------------------------|
+| 「自由席で」 | `seatPreference: non_reserved` (default) |
+| 「指定席で」 | `seatPreference: reserved` |
+| 「グリーン車で」 | `seatPreference: green` |
+| 「贅沢にグリーン車で」 | `seatPreference: green` |
+| "Non-reserved seat" | `seatPreference: non_reserved` |
+| "Reserved seat please" | `seatPreference: reserved` |
+| "Green car / first class" | `seatPreference: green` |
 
 ### 運賃タイプ / Fare Type (ticket)
 

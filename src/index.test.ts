@@ -7,8 +7,9 @@ import { describe, it, expect } from 'vitest';
 
 // re-implement functions for testing (or export from index.ts)
 interface SearchOptions {
-  timeType: 'departure' | 'arrival';
+  timeType: 'departure' | 'arrival' | 'first_train' | 'last_train' | 'unspecified';
   ticket: 'ic' | 'cash';
+  seatPreference: 'non_reserved' | 'reserved' | 'green';
   walkSpeed: 'fast' | 'slightly_fast' | 'slightly_slow' | 'slow';
   sortBy: 'time' | 'transfer' | 'fare';
   useAirline: boolean;
@@ -30,9 +31,16 @@ function buildYahooTransitUrl(
   minute: number,
   options: SearchOptions
 ): string {
-  const timeTypeMap = { departure: '1', arrival: '2' };
+  // type: 1=出発, 4=到着, 3=始発, 2=終電, 5=指定なし
+  const timeTypeMap = { departure: '1', arrival: '4', first_train: '3', last_train: '2', unspecified: '5' };
+  // ticket: ic=ICカード優先, normal=現金（きっぷ）優先
+  const ticketMap = { ic: 'ic', cash: 'normal' };
+  // expkind: 1=自由席優先, 2=指定席優先, 3=グリーン車優先
+  const seatPreferenceMap = { non_reserved: '1', reserved: '2', green: '3' };
+  // ws: 1=急いで, 2=少し急いで, 3=少しゆっくり, 4=ゆっくり
   const walkSpeedMap = { fast: '1', slightly_fast: '2', slightly_slow: '3', slow: '4' };
-  const sortByMap = { time: '0', transfer: '1', fare: '2' };
+  // s: 0=到着が早い順, 1=料金が安い順, 2=乗換回数順
+  const sortByMap = { time: '0', fare: '1', transfer: '2' };
 
   const params = new URLSearchParams({
     from: from,
@@ -44,8 +52,8 @@ function buildYahooTransitUrl(
     m1: Math.floor(minute / 10).toString(),
     m2: (minute % 10).toString(),
     type: timeTypeMap[options.timeType],
-    ticket: options.ticket,
-    expkind: '1',
+    ticket: ticketMap[options.ticket],
+    expkind: seatPreferenceMap[options.seatPreference],
     ws: walkSpeedMap[options.walkSpeed],
     s: sortByMap[options.sortBy],
     al: options.useAirline ? '1' : '0',
@@ -66,6 +74,7 @@ function buildYahooTransitUrl(
 const defaultOptions: SearchOptions = {
   timeType: 'departure',
   ticket: 'ic',
+  seatPreference: 'non_reserved',
   walkSpeed: 'slightly_slow',
   sortBy: 'time',
   useAirline: true,
@@ -103,7 +112,31 @@ describe('buildYahooTransitUrl', () => {
       ...defaultOptions,
       timeType: 'arrival',
     });
-    expect(url).toContain('type=2'); // arrival
+    expect(url).toContain('type=4'); // arrival
+  });
+
+  it('should set first_train type', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 5, 0, {
+      ...defaultOptions,
+      timeType: 'first_train',
+    });
+    expect(url).toContain('type=3'); // 始発
+  });
+
+  it('should set last_train type', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 23, 0, {
+      ...defaultOptions,
+      timeType: 'last_train',
+    });
+    expect(url).toContain('type=2'); // 終電
+  });
+
+  it('should set unspecified type', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 12, 0, {
+      ...defaultOptions,
+      timeType: 'unspecified',
+    });
+    expect(url).toContain('type=5'); // 指定なし
   });
 
   it('should disable shinkansen when specified', () => {
@@ -119,7 +152,15 @@ describe('buildYahooTransitUrl', () => {
       ...defaultOptions,
       sortBy: 'fare',
     });
-    expect(url).toContain('s=2'); // fare
+    expect(url).toContain('s=1'); // fare
+  });
+
+  it('should set sort by transfer', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 30, {
+      ...defaultOptions,
+      sortBy: 'transfer',
+    });
+    expect(url).toContain('s=2'); // transfer
   });
 
   it('should set walk speed to fast', () => {
@@ -135,7 +176,23 @@ describe('buildYahooTransitUrl', () => {
       ...defaultOptions,
       ticket: 'cash',
     });
-    expect(url).toContain('ticket=cash');
+    expect(url).toContain('ticket=normal'); // cash maps to 'normal'
+  });
+
+  it('should set reserved seat preference', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 30, {
+      ...defaultOptions,
+      seatPreference: 'reserved',
+    });
+    expect(url).toContain('expkind=2'); // 指定席優先
+  });
+
+  it('should set green car preference', () => {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 30, {
+      ...defaultOptions,
+      seatPreference: 'green',
+    });
+    expect(url).toContain('expkind=3'); // グリーン車優先
   });
 
   it('should include single via station', () => {
@@ -173,6 +230,7 @@ describe('SearchOptions defaults', () => {
   it('should have correct default values', () => {
     expect(defaultOptions.timeType).toBe('departure');
     expect(defaultOptions.ticket).toBe('ic');
+    expect(defaultOptions.seatPreference).toBe('non_reserved');
     expect(defaultOptions.walkSpeed).toBe('slightly_slow');
     expect(defaultOptions.sortBy).toBe('time');
     expect(defaultOptions.useShinkansen).toBe(true);

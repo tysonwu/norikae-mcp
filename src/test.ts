@@ -6,8 +6,9 @@
  */
 
 interface SearchOptions {
-  timeType: 'departure' | 'arrival';
+  timeType: 'departure' | 'arrival' | 'first_train' | 'last_train' | 'unspecified';
   ticket: 'ic' | 'cash';
+  seatPreference: 'non_reserved' | 'reserved' | 'green';
   walkSpeed: 'fast' | 'slightly_fast' | 'slightly_slow' | 'slow';
   sortBy: 'time' | 'transfer' | 'fare';
   useAirline: boolean;
@@ -29,9 +30,16 @@ function buildYahooTransitUrl(
   minute: number,
   options: SearchOptions
 ): string {
-  const timeTypeMap = { departure: '1', arrival: '2' };
+  // type: 1=出発, 4=到着, 3=始発, 2=終電, 5=指定なし
+  const timeTypeMap = { departure: '1', arrival: '4', first_train: '3', last_train: '2', unspecified: '5' };
+  // ticket: ic=ICカード優先, normal=現金（きっぷ）優先
+  const ticketMap = { ic: 'ic', cash: 'normal' };
+  // expkind: 1=自由席優先, 2=指定席優先, 3=グリーン車優先
+  const seatPreferenceMap = { non_reserved: '1', reserved: '2', green: '3' };
+  // ws: 1=急いで, 2=少し急いで, 3=少しゆっくり, 4=ゆっくり
   const walkSpeedMap = { fast: '1', slightly_fast: '2', slightly_slow: '3', slow: '4' };
-  const sortByMap = { time: '0', transfer: '1', fare: '2' };
+  // s: 0=到着が早い順, 1=料金が安い順, 2=乗換回数順
+  const sortByMap = { time: '0', fare: '1', transfer: '2' };
 
   const params = new URLSearchParams({
     from: from,
@@ -43,8 +51,8 @@ function buildYahooTransitUrl(
     m1: Math.floor(minute / 10).toString(),
     m2: (minute % 10).toString(),
     type: timeTypeMap[options.timeType],
-    ticket: options.ticket,
-    expkind: '1',
+    ticket: ticketMap[options.ticket],
+    expkind: seatPreferenceMap[options.seatPreference],
     ws: walkSpeedMap[options.walkSpeed],
     s: sortByMap[options.sortBy],
     al: options.useAirline ? '1' : '0',
@@ -106,6 +114,7 @@ async function testUrlBuilder() {
   const defaultOptions: SearchOptions = {
     timeType: 'departure',
     ticket: 'ic',
+    seatPreference: 'non_reserved',
     walkSpeed: 'slightly_slow',
     sortBy: 'time',
     useAirline: true,
@@ -152,6 +161,42 @@ async function testUrlBuilder() {
   console.log('Test 5 - Multiple via stations:');
   console.log(`  From: 東京 → Via: 表参道, 飯田橋, 広尾 → To: 新宿`);
   console.log(`  URL: ${url5}\n`);
+
+  // test 6: first train (始発)
+  const url6 = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 5, 0, {
+    ...defaultOptions,
+    timeType: 'first_train',
+  });
+  console.log('Test 6 - First train (始発):');
+  console.log(`  From: 東京 → To: 大阪`);
+  console.log(`  URL: ${url6}\n`);
+
+  // test 7: last train (終電)
+  const url7 = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 23, 0, {
+    ...defaultOptions,
+    timeType: 'last_train',
+  });
+  console.log('Test 7 - Last train (終電):');
+  console.log(`  From: 東京 → To: 大阪`);
+  console.log(`  URL: ${url7}\n`);
+
+  // test 8: green car preference
+  const url8 = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 0, {
+    ...defaultOptions,
+    seatPreference: 'green',
+  });
+  console.log('Test 8 - Green car preference:');
+  console.log(`  From: 東京 → To: 大阪`);
+  console.log(`  URL: ${url8}\n`);
+
+  // test 9: cash ticket
+  const url9 = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 0, {
+    ...defaultOptions,
+    ticket: 'cash',
+  });
+  console.log('Test 9 - Cash ticket (きっぷ):');
+  console.log(`  From: 東京 → To: 大阪`);
+  console.log(`  URL: ${url9}\n`);
 }
 
 async function testFetchAndParse() {
@@ -160,6 +205,7 @@ async function testFetchAndParse() {
   const defaultOptions: SearchOptions = {
     timeType: 'departure',
     ticket: 'ic',
+    seatPreference: 'non_reserved',
     walkSpeed: 'slightly_slow',
     sortBy: 'time',
     useAirline: true,
