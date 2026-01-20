@@ -1,6 +1,6 @@
 {
   "name": "norikae-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Yahoo!乗換案内を使った日本の電車乗り換え検索MCP",
   "type": "module",
   "main": "dist/index.js",
