@@ -1,5 +1,8 @@
 # 乗換案内MCP 🚃 / Norikae MCP
 
+[![npm version](https://badge.fury.io/js/norikae-mcp.svg)](https://www.npmjs.com/package/norikae-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 日本の電車乗り換え検索ができるMCP（Model Context Protocol）サーバーです。
 Yahoo!乗換案内のデータを使用して、駅から駅への最適なルートを検索できます。
 
@@ -12,6 +15,10 @@ Uses Yahoo! Transit data to find optimal routes between stations.*
 - ⏰ 指定時刻での検索（出発・到着時刻指定）/ Departure or arrival time specification
 - 💰 IC運賃の表示 / IC card fare display
 - 🔄 乗り換え回数・所要時間の比較 / Transfer count and travel time comparison
+
+## 必要条件 / Requirements
+
+- Node.js 18以上 / Node.js 18+
 
 ## インストール / Installation
 
@@ -218,6 +225,10 @@ AIに以下のように話しかけると、自動的に適切なオプション
 ## 開発 / Development
 
 ```bash
+# リポジトリをクローン / Clone the repository
+git clone https://github.com/YOUR_USERNAME/norikae-mcp.git
+cd norikae-mcp
+
 # 依存関係のインストール / Install dependencies
 npm install
 
