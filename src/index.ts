@@ -13,6 +13,7 @@ const server = new McpServer({
 const searchRouteSchema = {
   from: z.string().describe('出発駅名（例：東京、新宿、渋谷）'),
   to: z.string().describe('到着駅名（例：九段下、横浜、品川）'),
+  via: z.array(z.string()).optional().describe('経由駅名の配列（最大3駅、例：["表参道", "飯田橋"]）'),
   year: z.number().optional().describe('出発年（例：2026）'),
   month: z.number().optional().describe('出発月（1-12）'),
   day: z.number().optional().describe('出発日（1-31）'),
@@ -30,12 +31,90 @@ const searchRouteSchema = {
   useFerry: z.boolean().optional().describe('フェリーを使う'),
 };
 
+// register prompt for usage instructions
+server.registerPrompt(
+  'norikae-usage',
+  {
+    description: 'Instructions for using the Japanese train route search tool',
+  },
+  () => ({
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `# 乗換案内MCP 使用ガイド / Norikae MCP Usage Guide
+
+## 重要 / Important
+- 駅名は必ず日本語（漢字・かな）で入力してください
+- Station names MUST be in Japanese kanji/kana
+- Convert English AND Chinese station names to Japanese before calling
+
+## 英語→日本語 / English → Japanese
+| English | Japanese |
+|---------|----------|
+| Tokyo | 東京 |
+| Shinjuku | 新宿 |
+| Shibuya | 渋谷 |
+| Ikebukuro | 池袋 |
+| Ueno | 上野 |
+| Akihabara | 秋葉原 |
+| Ginza | 銀座 |
+| Roppongi | 六本木 |
+| Harajuku | 原宿 |
+| Yokohama | 横浜 |
+| Osaka | 大阪 |
+| Kyoto | 京都 |
+| Narita Airport | 成田空港 |
+| Haneda Airport | 羽田空港 |
+
+## 中国語→日本語 / Chinese → Japanese
+Japanese kanji may differ from Chinese hanzi:
+| 简体/繁體 | 日本語 |
+|-----------|--------|
+| 东京/東京 | 東京 |
+| 涩谷/澀谷 | 渋谷 |
+| 秋叶原/秋葉原 | 秋葉原 |
+| 横滨/橫濱 | 横浜 |
+
+## 使用例 / Usage Examples
+User: "How do I get from Tokyo to Shinjuku?"
+→ Call search_route with: from="東京", to="新宿"
+
+User: "東京から渋谷まで表参道経由で"
+→ Call search_route with: from="東京", to="渋谷", via=["表参道"]`,
+        },
+      },
+    ],
+  })
+);
+
 // register search_route tool
+const toolDescription = `Search train routes between stations in Japan using Yahoo! Transit.
+
+IMPORTANT: Station names MUST be in Japanese kanji/kana. Convert before calling:
+
+English → Japanese:
+- Tokyo → 東京, Shinjuku → 新宿, Shibuya → 渋谷, Ikebukuro → 池袋
+- Ueno → 上野, Akihabara → 秋葉原, Ginza → 銀座, Roppongi → 六本木
+- Yokohama → 横浜, Osaka → 大阪, Kyoto → 京都
+- Narita Airport → 成田空港, Haneda Airport → 羽田空港
+
+Chinese (Simplified/Traditional) → Japanese kanji:
+- 东京/東京 → 東京, 新宿 → 新宿, 涩谷/澀谷 → 渋谷
+- 秋叶原/秋葉原 → 秋葉原, 横滨/橫濱 → 横浜
+Note: Japanese kanji may differ from Chinese hanzi (e.g., 渋 vs 涩/澀, 横 vs 横/橫)
+
+Examples:
+- "Tokyo to Shinjuku" → from: "東京", to: "新宿"
+- "从东京到新宿" → from: "東京", to: "新宿"
+- "Shibuya to Ikebukuro via Harajuku" → from: "渋谷", to: "池袋", via: ["原宿"]`;
+
 server.registerTool(
   'search_route',
   {
     title: '乗り換え検索',
-    description: '駅から駅への電車ルートを検索します（Yahoo!乗換案内使用）',
+    description: toolDescription,
     inputSchema: searchRouteSchema,
     annotations: {
       readOnlyHint: true,    // data is only read, not modified
@@ -44,7 +123,7 @@ server.registerTool(
   },
   async (args) => {
     const {
-      from, to, year, month, day, hour, minute,
+      from, to, via, year, month, day, hour, minute,
       timeType, ticket, walkSpeed, sortBy,
       useAirline, useShinkansen, useExpress, useHighwayBus, useLocalBus, useFerry,
     } = args;
@@ -56,6 +135,9 @@ server.registerTool(
     const d = day ?? now.getDate();
     const hh = hour ?? now.getHours();
     const mm = minute ?? now.getMinutes();
+
+    // limit via stations to max 3
+    const viaStations = via?.slice(0, 3) ?? [];
 
     const options = {
       timeType: timeType ?? 'departure',
@@ -70,7 +152,7 @@ server.registerTool(
       useFerry: useFerry ?? true,
     };
 
-    const url = buildYahooTransitUrl(from, to, y, m, d, hh, mm, options);
+    const url = buildYahooTransitUrl(from, to, viaStations, y, m, d, hh, mm, options);
 
     try {
       const response = await fetch(url);
@@ -105,6 +187,7 @@ interface SearchOptions {
 function buildYahooTransitUrl(
   from: string,
   to: string,
+  via: string[],
   year: number,
   month: number,
   day: number,
@@ -138,6 +221,11 @@ function buildYahooTransitUrl(
     lb: options.useLocalBus ? '1' : '0',
     sr: options.useFerry ? '1' : '0',
   });
+
+  // add via stations (multiple via params supported)
+  for (const station of via) {
+    params.append('via', station);
+  }
 
   return `https://transit.yahoo.co.jp/search/result?${params.toString()}`;
 }

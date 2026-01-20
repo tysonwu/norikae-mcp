@@ -21,6 +21,7 @@ interface SearchOptions {
 function buildYahooTransitUrl(
   from: string,
   to: string,
+  via: string[],
   year: number,
   month: number,
   day: number,
@@ -53,6 +54,10 @@ function buildYahooTransitUrl(
     lb: options.useLocalBus ? '1' : '0',
     sr: options.useFerry ? '1' : '0',
   });
+
+  for (const station of via) {
+    params.append('via', station);
+  }
 
   return `https://transit.yahoo.co.jp/search/result?${params.toString()}`;
 }
@@ -112,13 +117,13 @@ async function testUrlBuilder() {
   };
 
   // test 1: basic route
-  const url1 = buildYahooTransitUrl('東京', '九段下', 2026, 1, 22, 10, 30, defaultOptions);
+  const url1 = buildYahooTransitUrl('東京', '九段下', [], 2026, 1, 22, 10, 30, defaultOptions);
   console.log('Test 1 - Basic route:');
   console.log(`  From: 東京 → To: 九段下`);
   console.log(`  URL: ${url1}\n`);
 
   // test 2: arrival time + no shinkansen
-  const url2 = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 18, 0, {
+  const url2 = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 18, 0, {
     ...defaultOptions,
     timeType: 'arrival',
     useShinkansen: false,
@@ -128,13 +133,25 @@ async function testUrlBuilder() {
   console.log(`  URL: ${url2}\n`);
 
   // test 3: sort by fare
-  const url3 = buildYahooTransitUrl('新宿', '横浜', 2026, 1, 22, 12, 0, {
+  const url3 = buildYahooTransitUrl('新宿', '横浜', [], 2026, 1, 22, 12, 0, {
     ...defaultOptions,
     sortBy: 'fare',
   });
   console.log('Test 3 - Sort by fare:');
   console.log(`  From: 新宿 → To: 横浜`);
   console.log(`  URL: ${url3}\n`);
+
+  // test 4: single via station
+  const url4 = buildYahooTransitUrl('東京', '新宿', ['表参道'], 2026, 1, 22, 10, 30, defaultOptions);
+  console.log('Test 4 - Single via station:');
+  console.log(`  From: 東京 → Via: 表参道 → To: 新宿`);
+  console.log(`  URL: ${url4}\n`);
+
+  // test 5: multiple via stations
+  const url5 = buildYahooTransitUrl('東京', '新宿', ['表参道', '飯田橋', '広尾'], 2026, 1, 22, 10, 30, defaultOptions);
+  console.log('Test 5 - Multiple via stations:');
+  console.log(`  From: 東京 → Via: 表参道, 飯田橋, 広尾 → To: 新宿`);
+  console.log(`  URL: ${url5}\n`);
 }
 
 async function testFetchAndParse() {
@@ -153,7 +170,8 @@ async function testFetchAndParse() {
     useFerry: true,
   };
 
-  const url = buildYahooTransitUrl('東京', '九段下', 2026, 1, 22, 10, 30, defaultOptions);
+  // test with via station
+  const url = buildYahooTransitUrl('東京', '新宿', ['表参道'], 2026, 1, 22, 10, 30, defaultOptions);
 
   console.log(`Fetching: ${url}\n`);
 

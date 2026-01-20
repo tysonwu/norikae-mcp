@@ -12,6 +12,7 @@ Uses Yahoo! Transit data to find optimal routes between stations.*
 ## 機能 / Features
 
 - 🚉 駅から駅への乗り換えルート検索 / Station-to-station route search
+- 🔀 経由駅の指定（最大3駅）/ Via station specification (up to 3 stations)
 - ⏰ 指定時刻での検索（出発・到着時刻指定）/ Departure or arrival time specification
 - 💰 IC運賃の表示 / IC card fare display
 - 🔄 乗り換え回数・所要時間の比較 / Transfer count and travel time comparison
@@ -90,6 +91,7 @@ npx norikae-mcp
 |-----------|------|------|---------------------|
 | `from` | string | ✅ | 出発駅名 / Departure station (e.g., 東京, 新宿) |
 | `to` | string | ✅ | 到着駅名 / Arrival station (e.g., 九段下, 横浜) |
+| `via` | string[] | - | 経由駅名の配列（最大3駅）/ Via stations array (max 3) |
 | `year` | number | - | 出発年 / Year (default: current) |
 | `month` | number | - | 出発月 / Month (default: current) |
 | `day` | number | - | 出発日 / Day (default: current) |
@@ -130,6 +132,16 @@ AIに以下のように話しかけると、自動的に適切なオプション
 | 「新宿から横浜への行き方」 | `from: 新宿`, `to: 横浜` |
 | "How to get from Tokyo to Shibuya" | `from: 東京`, `to: 渋谷` |
 | "Route from Shinjuku to Yokohama" | `from: 新宿`, `to: 横浜` |
+
+### 経由駅の指定 / Via Stations
+
+| あなたの質問 / Your Question | 認識されるオプション / Recognized Options |
+|------------------------------|------------------------------------------|
+| 「東京から新宿まで、表参道経由で」 | `from: 東京`, `to: 新宿`, `via: ["表参道"]` |
+| 「渋谷から池袋、原宿と新宿を経由して」 | `from: 渋谷`, `to: 池袋`, `via: ["原宿", "新宿"]` |
+| 「品川から上野、東京駅と秋葉原を通って」 | `from: 品川`, `to: 上野`, `via: ["東京", "秋葉原"]` |
+| "From Tokyo to Shinjuku via Omotesando" | `from: 東京`, `to: 新宿`, `via: ["表参道"]` |
+| "Shibuya to Ikebukuro, passing through Harajuku and Shinjuku" | `from: 渋谷`, `to: 池袋`, `via: ["原宿", "新宿"]` |
 
 ### 時刻指定 / Time Specification
 
@@ -221,6 +233,20 @@ AIに以下のように話しかけると、自動的に適切なオプション
 "Next Friday, arriving at Shinagawa by 6 PM from Shinjuku, no Shinkansen or planes, fewest transfers"
 ```
 → `from: 新宿`, `to: 品川`, `timeType: arrival`, `hour: 18`, `useShinkansen: false`, `useAirline: false`, `sortBy: transfer`
+
+**例5 / Example 5: 経由駅を指定 / Specifying via stations**
+```
+「東京から新宿まで、表参道と飯田橋を経由して、一番安いルートで」
+"From Tokyo to Shinjuku via Omotesando and Iidabashi, cheapest route"
+```
+→ `from: 東京`, `to: 新宿`, `via: ["表参道", "飯田橋"]`, `sortBy: fare`
+
+**例6 / Example 6: 観光ルート / Sightseeing route**
+```
+「浅草から原宿まで、上野と秋葉原と東京を通って、ゆっくり歩きで」
+"From Asakusa to Harajuku, passing through Ueno, Akihabara, and Tokyo, walking slowly"
+```
+→ `from: 浅草`, `to: 原宿`, `via: ["上野", "秋葉原", "東京"]`, `walkSpeed: slow`
 
 ## 開発 / Development
 

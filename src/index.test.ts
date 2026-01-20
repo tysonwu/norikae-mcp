@@ -22,6 +22,7 @@ interface SearchOptions {
 function buildYahooTransitUrl(
   from: string,
   to: string,
+  via: string[],
   year: number,
   month: number,
   day: number,
@@ -55,6 +56,10 @@ function buildYahooTransitUrl(
     sr: options.useFerry ? '1' : '0',
   });
 
+  for (const station of via) {
+    params.append('via', station);
+  }
+
   return `https://transit.yahoo.co.jp/search/result?${params.toString()}`;
 }
 
@@ -73,13 +78,13 @@ const defaultOptions: SearchOptions = {
 
 describe('buildYahooTransitUrl', () => {
   it('should build basic URL with from and to', () => {
-    const url = buildYahooTransitUrl('東京', '九段下', 2026, 1, 22, 10, 30, defaultOptions);
+    const url = buildYahooTransitUrl('東京', '九段下', [], 2026, 1, 22, 10, 30, defaultOptions);
     expect(url).toContain('from=%E6%9D%B1%E4%BA%AC'); // 東京 encoded
     expect(url).toContain('to=%E4%B9%9D%E6%AE%B5%E4%B8%8B'); // 九段下 encoded
   });
 
   it('should set correct time parameters', () => {
-    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 35, defaultOptions);
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 35, defaultOptions);
     expect(url).toContain('y=2026');
     expect(url).toContain('m=01');
     expect(url).toContain('d=22');
@@ -89,12 +94,12 @@ describe('buildYahooTransitUrl', () => {
   });
 
   it('should set departure type by default', () => {
-    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, defaultOptions);
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 30, defaultOptions);
     expect(url).toContain('type=1'); // departure
   });
 
   it('should set arrival type when specified', () => {
-    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 18, 0, {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 18, 0, {
       ...defaultOptions,
       timeType: 'arrival',
     });
@@ -102,7 +107,7 @@ describe('buildYahooTransitUrl', () => {
   });
 
   it('should disable shinkansen when specified', () => {
-    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 30, {
       ...defaultOptions,
       useShinkansen: false,
     });
@@ -110,7 +115,7 @@ describe('buildYahooTransitUrl', () => {
   });
 
   it('should set sort by fare', () => {
-    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 30, {
       ...defaultOptions,
       sortBy: 'fare',
     });
@@ -118,7 +123,7 @@ describe('buildYahooTransitUrl', () => {
   });
 
   it('should set walk speed to fast', () => {
-    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 30, {
       ...defaultOptions,
       walkSpeed: 'fast',
     });
@@ -126,11 +131,23 @@ describe('buildYahooTransitUrl', () => {
   });
 
   it('should set cash ticket type', () => {
-    const url = buildYahooTransitUrl('東京', '大阪', 2026, 1, 22, 10, 30, {
+    const url = buildYahooTransitUrl('東京', '大阪', [], 2026, 1, 22, 10, 30, {
       ...defaultOptions,
       ticket: 'cash',
     });
     expect(url).toContain('ticket=cash');
+  });
+
+  it('should include single via station', () => {
+    const url = buildYahooTransitUrl('東京', '新宿', ['表参道'], 2026, 1, 22, 10, 30, defaultOptions);
+    expect(url).toContain('via=%E8%A1%A8%E5%8F%82%E9%81%93'); // 表参道 encoded
+  });
+
+  it('should include multiple via stations', () => {
+    const url = buildYahooTransitUrl('東京', '新宿', ['表参道', '飯田橋', '広尾'], 2026, 1, 22, 10, 30, defaultOptions);
+    expect(url).toContain('via=%E8%A1%A8%E5%8F%82%E9%81%93'); // 表参道
+    expect(url).toContain('via=%E9%A3%AF%E7%94%B0%E6%A9%8B'); // 飯田橋
+    expect(url).toContain('via=%E5%BA%83%E5%B0%BE'); // 広尾
   });
 });
 
