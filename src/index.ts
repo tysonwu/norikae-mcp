@@ -11,25 +11,25 @@ const server = new McpServer({
 
 // input schema for search_route
 const searchRouteSchema = {
-  from: z.string().describe('出発駅名（例：東京、新宿、渋谷）'),
-  to: z.string().describe('到着駅名（例：九段下、横浜、品川）'),
-  via: z.array(z.string()).optional().describe('経由駅名の配列（最大3駅、例：["表参道", "飯田橋"]）'),
-  year: z.number().optional().describe('出発年（例：2026）'),
-  month: z.number().optional().describe('出発月（1-12）'),
-  day: z.number().optional().describe('出発日（1-31）'),
-  hour: z.number().optional().describe('出発時刻の時（0-23）'),
-  minute: z.number().optional().describe('出発時刻の分（0-59）'),
-  timeType: z.enum(['departure', 'arrival', 'first_train', 'last_train', 'unspecified']).optional().describe('時刻指定タイプ：departure=出発時刻、arrival=到着時刻、first_train=始発、last_train=終電、unspecified=指定なし'),
-  ticket: z.enum(['ic', 'cash']).optional().describe('運賃タイプ：ic=IC運賃、cash=きっぷ運賃'),
-  seatPreference: z.enum(['non_reserved', 'reserved', 'green']).optional().describe('座席指定：non_reserved=自由席優先、reserved=指定席優先、green=グリーン車優先'),
-  walkSpeed: z.enum(['fast', 'slightly_fast', 'slightly_slow', 'slow']).optional().describe('歩く速度'),
-  sortBy: z.enum(['time', 'transfer', 'fare']).optional().describe('並び順：time=到着が早い順、transfer=乗換回数順、fare=料金安い順'),
-  useAirline: z.boolean().optional().describe('空路を使う'),
-  useShinkansen: z.boolean().optional().describe('新幹線を使う'),
-  useExpress: z.boolean().optional().describe('有料特急を使う'),
-  useHighwayBus: z.boolean().optional().describe('高速バスを使う'),
-  useLocalBus: z.boolean().optional().describe('路線バスを使う'),
-  useFerry: z.boolean().optional().describe('フェリーを使う'),
+  from: z.string().describe('出発駅名 / Departure station (例: 東京, Shinjuku)'),
+  to: z.string().describe('到着駅名 / Arrival station (例: 横浜, Shibuya)'),
+  via: z.array(z.string()).optional().describe('経由駅名の配列（最大3駅）/ Via stations array (max 3)'),
+  year: z.number().optional().describe('出発年 / Year (例: 2026)'),
+  month: z.number().optional().describe('出発月 / Month (1-12)'),
+  day: z.number().optional().describe('出発日 / Day (1-31)'),
+  hour: z.number().optional().describe('出発時刻の時 / Hour (0-23)'),
+  minute: z.number().optional().describe('出発時刻の分 / Minute (0-59)'),
+  timeType: z.enum(['departure', 'arrival', 'first_train', 'last_train', 'unspecified']).optional().describe('時刻指定タイプ / Time type: departure=出発時刻、arrival=到着時刻、first_train=始発、last_train=終電、unspecified=指定なし'),
+  ticket: z.enum(['ic', 'cash']).optional().describe('運賃タイプ / Fare type: ic=IC運賃、cash=きっぷ運賃'),
+  seatPreference: z.enum(['non_reserved', 'reserved', 'green']).optional().describe('座席指定 / Seat preference: non_reserved=自由席優先、reserved=指定席優先、green=グリーン車優先'),
+  walkSpeed: z.enum(['fast', 'slightly_fast', 'slightly_slow', 'slow']).optional().describe('歩く速度 / Walking speed'),
+  sortBy: z.enum(['time', 'transfer', 'fare']).optional().describe('並び順 / Sort by: time=到着が早い順、transfer=乗換回数順、fare=料金安い順'),
+  useAirline: z.boolean().optional().describe('空路を使う / Use airlines'),
+  useShinkansen: z.boolean().optional().describe('新幹線を使う / Use Shinkansen'),
+  useExpress: z.boolean().optional().describe('有料特急を使う / Use express trains'),
+  useHighwayBus: z.boolean().optional().describe('高速バスを使う / Use highway buses'),
+  useLocalBus: z.boolean().optional().describe('路線バスを使う / Use local buses'),
+  useFerry: z.boolean().optional().describe('フェリーを使う / Use ferries'),
 };
 
 // register prompt for usage instructions
@@ -109,7 +109,15 @@ Note: Japanese kanji may differ from Chinese hanzi (e.g., 渋 vs 涩/澀, 横 vs
 Examples:
 - "Tokyo to Shinjuku" → from: "東京", to: "新宿"
 - "从东京到新宿" → from: "東京", to: "新宿"
-- "Shibuya to Ikebukuro via Harajuku" → from: "渋谷", to: "池袋", via: ["原宿"]`;
+- "Shibuya to Ikebukuro via Harajuku" → from: "渋谷", to: "池袋", via: ["原宿"]
+
+Options summary:
+- timeType: departure(出発), arrival(到着), first_train(始発), last_train(終電), unspecified(指定なし)
+- ticket: ic(ICカード), cash(きっぷ)
+- seatPreference: non_reserved(自由席), reserved(指定席), green(グリーン車)
+- walkSpeed: fast(急いで), slightly_fast(少し急いで), slightly_slow(少しゆっくり), slow(ゆっくり)
+- sortBy: time(到着が早い順), transfer(乗換回数順), fare(料金安い順)
+- useAirline, useShinkansen, useExpress, useHighwayBus, useLocalBus, useFerry: true/false`;
 
 server.registerTool(
   'search_route',
